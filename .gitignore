@@ -17,3 +17,5 @@ Thumbs.db
 
 # GTest (baixado pelo FetchContent)
 _deps/
+
+docs/
