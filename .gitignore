@@ -1,0 +1,19 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+
+# IDEs
+.vscode/
+.vs/
+.idea/
+*.swp
+*.user
+
+# System files
+.DS_Store
+Thumbs.db
+
+# GTest (baixado pelo FetchContent)
+_deps/
