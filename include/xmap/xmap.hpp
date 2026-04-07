@@ -41,7 +41,7 @@ public:
    */
   explicit MemoryMap(std::string_view filepath, Mode mode = Mode::ReadOnly) {
     handle_ = xmap_open(filepath.data(), static_cast<xmap_mode_t>(mode));
-    if (!handle_) {
+    if (handle_ == nullptr) {
       throw std::runtime_error("Failed to map file to memory: " + std::string(filepath));
     }
   }
@@ -51,7 +51,7 @@ public:
   }
 
   void close() noexcept {
-    if (handle_) {
+    if (handle_ != nullptr) {
       xmap_close(handle_);
       handle_ = nullptr;
     }
@@ -62,21 +62,73 @@ public:
    * @tparam T Type to cast the memory to (defaults to std::byte).
    */
   template <typename T = std::byte> std::span<T> data() const {
-    if (!handle_)
+    if (!handle_) {
       return {};
+    }
     return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
   }
 
-  size_t size() const noexcept {
-    return handle_ ? xmap_size(handle_) : 0;
+  [[nodiscard]] size_t size() const noexcept {
+    return (handle_ != nullptr) ? xmap_size(handle_) : 0;
   }
 
-  bool flush(bool async = false) noexcept {
-    return handle_ ? xmap_flush(handle_, async) : false;
+  [[nodiscard]] bool flush(bool async = false) noexcept {
+    return (handle_ != nullptr) ? xmap_flush(handle_, async) : false;
   }
 
-  bool is_valid() const noexcept {
+  [[nodiscard]] bool is_valid() const noexcept {
     return handle_ != nullptr;
+  }
+};
+
+class SharedMemory {
+private:
+  xmap_t *handle_ = nullptr;
+  std::string name_;
+
+public:
+  SharedMemory(const SharedMemory &) = delete;
+  SharedMemory &operator=(const SharedMemory &) = delete;
+
+  SharedMemory(SharedMemory &&other) noexcept
+      : handle_(std::exchange(other.handle_, nullptr)), name_(std::move(other.name_)) {
+  }
+
+  /**
+   * @brief Creates or connects to a name shared memory segment.
+   */
+  SharedMemory(std::string_view name, size_t size, Mode mode = Mode::ReadWrite) : name_(name) {
+    handle_ = xmap_open_shared(name_.c_str(), size, static_cast<xmap_mode_t>(mode));
+    if (handle_ == nullptr) {
+      throw new std::runtime_error("Failed to create/open shared memory: " + name_);
+    }
+  }
+
+  ~SharedMemory() {
+    if (handle_ != nullptr) {
+      xmap_close(handle_);
+    }
+  }
+
+  template <typename T = std::byte> std::span<T> data() const {
+    if (!handle_) {
+      return {};
+    }
+    return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
+  }
+ [[nodiscard]] size_t size() const noexcept {
+    return (handle_ != nullptr) ? xmap_size(handle_) : 0;
+  }
+
+  [[nodiscard]] bool is_valid() const noexcept {
+    return handle_ != nullptr;
+  }
+
+  /**
+   * @brief Unlinks the shared memory segment from the OS.
+   */
+  static bool unlink(std::string name) noexcept {
+    return xmap_unlink_shared(std::string(std::move(name)).c_str());
   }
 };
 

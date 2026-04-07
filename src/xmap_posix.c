@@ -84,8 +84,67 @@ bool xmap_flush(xmap_t *map, bool async) {
   if (!map || !map->data) {
     return false;
   }
-  int flags = (int)async ? MS_ASYNC : MS_ASYNC;
+  int flags = async ? MS_ASYNC : MS_ASYNC;
   return msync(map->data, map->size, flags) == 0;
+}
+
+xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode) {
+  if (!name || size == 0) {
+    return NULL;
+  }
+
+  int oflags = (mode == XMAP_READ_WRITE) ? O_RDWR : O_RDONLY;
+
+  int fd = shm_open(name, oflags, 0666);
+
+  bool created = false;
+
+  if (fd == -1 && mode == XMAP_READ_WRITE) {
+    fd = shm_open(name, oflags | O_CREAT, 0666);
+    if (fd == -1) {
+      return NULL;
+    }
+
+    created = true;
+  }
+
+  if (fd == -1) {
+    return NULL;
+  }
+
+  if (created) {
+    if (ftruncate(fd, size) == -1) {
+      close(fd);
+      return NULL;
+    }
+  }
+
+  int prot_flags = PROT_READ;
+  if (mode == XMAP_READ_WRITE) {
+    prot_flags |= PROT_WRITE;
+  }
+
+  void *data = mmap(NULL, size, prot_flags, MAP_SHARED, fd, 0);
+  if (data == MAP_FAILED) {
+    close(fd);
+    return NULL;
+  }
+
+  xmap_t *map = (xmap_t *)malloc(sizeof(xmap_t));
+  if (!map) {
+    munmap(data, size);
+    close(fd);
+    return NULL;
+  }
+
+  map->data = data;
+  map->size = size;
+  map->fd = fd;
+  return map;
+}
+
+bool xmap_unlink_shared(const char *name) {
+  return (name ? (shm_unlink(name) == 0) : false) != 0;
 }
 
 #endif

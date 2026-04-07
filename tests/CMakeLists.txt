@@ -10,7 +10,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
 
-add_executable(xmap_test test_xmap.cpp)
+add_executable(xmap_test test_xmap.cpp test_ipc.cpp)
 
 target_link_libraries(xmap_test PRIVATE xmap::xmap GTest::gtest_main)
 

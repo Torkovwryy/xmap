@@ -26,7 +26,11 @@ if (WIN32)
     target_sources(xmap PRIVATE src/xmap_win32.c)
 elseif (UNIX)
     target_sources(xmap PRIVATE src/xmap_posix.c)
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(xmap PRIVATE rt)
+    endif ()
 endif ()
+
 
 # --- Include directories ---
 target_include_directories(xmap
@@ -34,6 +38,18 @@ target_include_directories(xmap
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
+
+# --- Sanitizers (Debug Only)
+option(XMAP_ENABLE_SANITIZERS "Enable ASan and UBSan" OFF)
+
+if (XMAP_ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "libxmap: Enabling Address and Undefined Behavior Sanitizers")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        add_compile_options(-fsanitize=address -fsanitize=undefined)
+    elseif (MSVC)
+        add_compile_options(/fsanitize=address)
+    endif ()
+endif ()
 
 # --- Strict compiler warnings ---
 if (MSVC)

@@ -91,4 +91,43 @@ bool xmap_flush(xmap_t *map, bool async) {
   return true;
 }
 
+xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode) {
+  if (!name || size == 0)
+    return NULL;
+
+  DWORD protect = (mode == XMAP_READ_WRITE) ? PAGE_READWRITE : PAGE_READONLY;
+
+  HANDLE map_handle =
+      CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, protect, (DWORD)((size >> 32) & 0xFFFFFFFF),
+                         (DWORD)(size & 0xFFFFFFFF), name);
+
+  if (map_handle == NULL)
+    return NULL;
+
+  DWORD map_access = (mode == XMAP_READ_WRITE) ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ;
+  void *data = MapViewOfFile(map_handle, map_access, 0, 0, size);
+  if (data == NULL) {
+    CloseHandle(map_handle);
+    return NULL;
+  }
+
+  xmap_t *map = (xmap_t *)malloc(sizeof(xmap_t));
+  if (!map) {
+    UnmapViewOfFile(data);
+    CloseHandle(map_handle);
+    return NULL;
+  }
+
+  map->data = data;
+  map->size = size;
+  map->file_handle = INVALID_HANDLE_VALUE;
+  map->map_handle = map_handle;
+  return map;
+}
+
+bool xmap_unlink_shared(const char *name) {
+  (void)name;
+  return true;
+}
+
 #endif

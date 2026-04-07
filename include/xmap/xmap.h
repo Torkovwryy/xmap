@@ -75,6 +75,21 @@ XMAP_API size_t xmap_size(const xmap_t *map);
  */
 XMAP_API bool xmap_flush(xmap_t *map, bool async);
 
+/**
+ * @brief Creates or opens a named shared memory segment for Inter-Process Communication (IPC).
+ * * @param name The unique for the shared memory (e.g., "/my_shared_mem").
+ * @param size The size of the memory segment in bytes.
+ * @param mode Access mode (XMAP_READ_ONLY or XMAP_READ_WRITE).
+ * @return xmap_t* A valid handle on success, NULL on failure.
+ */
+XMAP_API xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode);
+
+/**
+ * @brief Removes a named shared memory segment from the system.
+ * @param name The unique name of the shared memory.
+ * @return true on success, false on failure.
+ */
+XMAP_API bool xmap_unlink_shared(const char *name);
 #ifdef __cplusplus
 }
 #endif
