@@ -145,6 +145,12 @@ xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags
 #endif
   }
 
+  if (flags & XMAP_FLAG_POPULATE) {
+#ifdef __linux__
+    mmap_flags |= MAP_POPULATE;
+#endif
+  }
+
   void *data = mmap(NULL, size, prot_flags, mmap_flags, fd, 0);
   if (data == MAP_FAILED) {
     close(fd);

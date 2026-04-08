@@ -4,6 +4,7 @@ project(xmap VERSION 1.0.0 LANGUAGES C CXX)
 # --- Options ---
 option(XMAP_BUILD_SHARED_LIBS "Build xmap as a shared library" OFF)
 option(XMAP_BUILD_TESTS "Build xmap test suite" ON)
+option(XMAP_BUILD_BENCHMARKS "Build xmap benchmark suite" OFF)
 
 # --- Compiler Standards ---
 set(CMAKE_C_STANDARD 11)
@@ -64,4 +65,9 @@ endif ()
 if (XMAP_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif ()
+
+# --- Benchmarks ---
+if (XMAP_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif ()

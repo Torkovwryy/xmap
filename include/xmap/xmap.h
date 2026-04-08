@@ -96,7 +96,9 @@ XMAP_API bool xmap_unlink_shared(const char *name);
  */
 typedef enum {
   XMAP_FLAG_NONE = 0,
-  XMAP_FLAG_HUGE_PAGES = 1 << 0 /**< Request huge pages (2MB/1GB) for extreme TLB performance. */
+  XMAP_FLAG_HUGE_PAGES = 1 << 0, /**< Request huge pages (2MB/1GB) for extreme TLB performance. */
+  XMAP_FLAG_POPULATE =
+      1 << 1 /** Pre-fault page tables (Linux MAP_POPULATE) for faster initial writes. */
 } xmap_flags_t;
 
 /**

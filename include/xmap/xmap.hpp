@@ -15,7 +15,11 @@
 namespace xmap {
 
 enum class Mode { ReadOnly = XMAP_READ_ONLY, ReadWrite = XMAP_READ_WRITE };
-enum class Flags : uint32_t { None = XMAP_FLAG_NONE, HugePages = XMAP_FLAG_HUGE_PAGES };
+enum class Flags : uint32_t {
+  None = XMAP_FLAG_NONE,
+  HugePages = XMAP_FLAG_HUGE_PAGES,
+  Populate = XMAP_FLAG_POPULATE
+};
 
 inline Flags operator|(Flags a, Flags b) {
   return static_cast<Flags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
@@ -77,15 +81,15 @@ public:
     return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
   }
 
-  [[nodiscard]] size_t size() const noexcept {
+  size_t size() const noexcept {
     return (handle_ != nullptr) ? xmap_size(handle_) : 0;
   }
 
-  [[nodiscard]] bool flush(bool async = false) noexcept {
+  bool flush(bool async = false) noexcept {
     return (handle_ != nullptr) ? xmap_flush(handle_, async) : false;
   }
 
-  [[nodiscard]] bool is_valid() const noexcept {
+  bool is_valid() const noexcept {
     return handle_ != nullptr;
   }
 };
@@ -125,11 +129,11 @@ public:
     }
     return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
   }
-  [[nodiscard]] size_t size() const noexcept {
+  size_t size() const noexcept {
     return (handle_ != nullptr) ? xmap_size(handle_) : 0;
   }
 
-  [[nodiscard]] bool is_valid() const noexcept {
+  bool is_valid() const noexcept {
     return handle_ != nullptr;
   }
 
