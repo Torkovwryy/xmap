@@ -124,15 +124,17 @@ public:
   }
 
   /**
-   * @brief Creates or connects to a name shared memory segment.
+   * @brief Creates or connects to a named shared memory segment.
    */
   SharedMemory(std::string_view name, size_t size, Mode mode = Mode::ReadWrite,
                IpcFlags flags = IpcFlags::CreateIfMissing)
       : name_(name) {
     handle_ = xmap_open_shared(name_.c_str(), size, static_cast<xmap_mode_t>(mode),
                                static_cast<xmap_ipc_flags_t>(flags));
+
     if (handle_ == nullptr) {
-      throw new std::runtime_error("Failed to create/open shared memory: " + name_);
+      throw std::runtime_error(std::string("Failed to create/open shared memory: ") +
+                               xmap_last_error());
     }
   }
 
@@ -142,12 +144,19 @@ public:
     }
   }
 
-  template <typename T = std::byte> std::span<T> data() const {
-    if (!handle_) {
+  template <typename T = std::byte> std::span<T> data() {
+    if (!handle_)
       return {};
-    }
     return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
   }
+
+  template <typename T = std::byte> std::span<const T> data() const {
+    if (!handle_)
+      return {};
+    return std::span<const T>(static_cast<const T *>(xmap_data(handle_)),
+                              xmap_size(handle_) / sizeof(T));
+  }
+
   size_t size() const noexcept {
     return (handle_ != nullptr) ? xmap_size(handle_) : 0;
   }

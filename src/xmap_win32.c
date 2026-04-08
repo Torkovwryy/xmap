@@ -14,8 +14,26 @@ static void set_last_error(const char *msg) {
   snprintf(tls_error_buf, sizeof(tls_error_buf), "%s", msg);
 }
 
-static bool win32_enable_large_page_privilege(void) {
-  return win32_enable_large_page_privilege();
+XMAP_API bool xmap_init_large_page_privileges(void) {
+  HANDLE hToken;
+  TOKEN_PRIVILEGES tp;
+
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+    return false;
+  }
+
+  if (!LookupPrivilegeValueA(NULL, "SeLockMemoryPrivilege", &tp.Privileges[0].Luid)) {
+    CloseHandle(hToken);
+    return false;
+  }
+
+  tp.PrivilegeCount = 1;
+  tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+  bool result = AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), NULL, NULL);
+  CloseHandle(hToken);
+
+  return result && (GetLastError() == ERROR_SUCCESS);
 }
 
 struct xmap_t {
@@ -66,24 +84,26 @@ xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode, xmap_i
   if (!name || size == 0)
     return NULL;
 
-  DWORD protect = (mode == XMAP_READ_WRITE) ? PAGE_READWRITE : PAGE_READONLY;
-
-  HANDLE map_handle =
-      CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, protect, (DWORD)((size >> 32) & 0xFFFFFFFF),
-                         (DWORD)(size & 0xFFFFFFFF), name);
-
-  if (map_handle == NULL) {
-    set_last_error("CreateFileMappingA failed for shared memory");
-    return NULL;
-  }
-
-  if ((flags & XMAP_IPC_CREATE_IF_MISSING) && GetLastError() != ERROR_ALREADY_EXISTS) {
-    CloseHandle(map_handle);
-    set_last_error("Shared memory segment does not exist");
-    return NULL;
-  }
-
+  HANDLE map_handle = NULL;
   DWORD map_access = (mode == XMAP_READ_WRITE) ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ;
+
+  if (flags & XMAP_IPC_CREATE_IF_MISSING) {
+    DWORD protect = (mode == XMAP_READ_WRITE) ? PAGE_READWRITE : PAGE_READONLY;
+    map_handle =
+        CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, protect, (DWORD)((size >> 32) & 0xFFFFFFFF),
+                           (DWORD)(size & 0xFFFFFFFF), name);
+    if (map_handle == NULL) {
+      set_last_error("CreateFileMappingA failed for shared memory");
+      return NULL;
+    }
+  } else {
+    map_handle = OpenFileMappingA(map_access, FALSE, name);
+    if (map_handle == NULL) {
+      set_last_error("Shared memory segment does not exist (OpenFileMappingA failed)");
+      return NULL;
+    }
+  }
+
   void *data = MapViewOfFile(map_handle, map_access, 0, 0, size);
   if (data == NULL) {
     set_last_error("MapViewOfFile failed for shared memory");
@@ -106,8 +126,6 @@ xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode, xmap_i
 }
 
 static wchar_t *utf8_to_utf16(const char *utf8) {
-  if (!utf8)
-    return NULL;
 
   int size = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
   if (size <= 0)
@@ -170,7 +188,7 @@ xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags
       return NULL;
     }
 
-    if (win32_enable_large_page_privilege()) {
+    if (xmap_init_large_page_privileges()) {
       protect |= SEC_LARGE_PAGES;
     }
   }
