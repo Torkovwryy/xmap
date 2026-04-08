@@ -71,3 +71,32 @@ endif ()
 if (XMAP_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif ()
+
+# --- Installation Rules ---
+include(GNUInstallDirs)
+
+install(TARGETS xmap
+        EXPORT xmapTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(DIRECTORY include/xmap DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT xmapTargets
+        FILE xmapTargets.cmake
+        NAMESPACE xmap::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xmap
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        "xmapConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xmapConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xmap
+)

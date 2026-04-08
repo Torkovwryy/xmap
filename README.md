@@ -38,17 +38,20 @@ a zero-cost, type-safe C++20 interface using `std::span`.
 
 int main() {
     try {
-        // Map file in ReadWrite mode
-        xmap::MemoryMap map("database.bin", xmap::Mode::ReadWrite);
+        // Safe and cross-platform path handling
+        std::filesystem::path file_path = "database.bin"
         
-        // Access data securely via std::span<std::byte>
-        auto data = map.data<char>();
+        // Map file in ReadWrite mode with OS pre-faulting
+        xmap::MemoryMap map(file_path, xmap::Mode::ReadWrite, xmap::Flags::Populate);
+        
+        // Access data securely via std::span<std::byte> (Zero-Copy)
+        auto data = map.data<char>(); // Returns mutable span
         
         // Mutate memory directly
         data[0] = 'X';
         
-        // Flush changes to disk asynchronously
-        map.flush(true); 
+        // Flush changes to disk synchronously
+        map.flush(false); 
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << '\n';

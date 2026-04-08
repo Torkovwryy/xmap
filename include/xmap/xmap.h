@@ -7,7 +7,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #ifdef XMAP_BUILD_SHARED
@@ -33,6 +32,11 @@ extern "C" {
  * @brief Access mode for the memory map.
  */
 typedef enum { XMAP_READ_ONLY = 0, XMAP_READ_WRITE = 1 } xmap_mode_t;
+
+typedef enum {
+  XMAP_IPC_CREATE_IF_MISSING = 1 << 0,
+  XMAP_IPC_OPEN_EXISTING = 1 << 1
+} xmap_ipc_flags_t;
 
 /**
  * @brief Opaque handle representing a memory mapped file.
@@ -80,9 +84,17 @@ XMAP_API bool xmap_flush(xmap_t *map, bool async);
  * * @param name The unique for the shared memory (e.g., "/my_shared_mem").
  * @param size The size of the memory segment in bytes.
  * @param mode Access mode (XMAP_READ_ONLY or XMAP_READ_WRITE).
+ * @param flags Intention flags (XMAP_IPC_CREATE_IF_MISSING or XMAP_IPC_OPEN_EXISTING)
  * @return xmap_t* A valid handle on success, NULL on failure.
  */
-XMAP_API xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode);
+XMAP_API xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode,
+                                  xmap_ipc_flags_t flags);
+/**
+ * @brief [Windows Only] Enables the SeLockMemoryPrivilege for the current process.
+ * Must be called early in main() by the user application before requesting Huge Pages.
+ * @return true if successful or already granted, false if admin rights are missing.
+ */
+XMAP_API bool xmap_init_large_page_privileges(void);
 
 /**
  * @brief Removes a named shared memory segment from the system.
@@ -109,6 +121,11 @@ typedef enum {
  * @return xmap_t* A valid handle on success, NULL on failure.
  */
 XMAP_API xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags);
+
+/**
+ * @brief Returns a human-readable thread-local string describing the last error.
+ */
+XMAP_API const char *xmap_last_error(void);
 
 #ifdef __cplusplus
 }

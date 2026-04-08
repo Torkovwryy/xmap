@@ -7,14 +7,17 @@
 
 #include "xmap.h"
 #include <cstddef>
+#include <filesystem>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 
 namespace xmap {
 
 enum class Mode { ReadOnly = XMAP_READ_ONLY, ReadWrite = XMAP_READ_WRITE };
+
 enum class Flags : uint32_t {
   None = XMAP_FLAG_NONE,
   HugePages = XMAP_FLAG_HUGE_PAGES,
@@ -25,8 +28,16 @@ inline Flags operator|(Flags a, Flags b) {
   return static_cast<Flags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
+enum class IpcFlags : uint32_t {
+  CreateIfMissing = XMAP_IPC_CREATE_IF_MISSING,
+  OpenExisting = XMAP_IPC_OPEN_EXISTING
+};
+
+inline IpcFlags operator|(IpcFlags a, IpcFlags b) {
+  return static_cast<IpcFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
 class MemoryMap {
-private:
   xmap_t *handle_ = nullptr;
 
 public:
@@ -48,14 +59,12 @@ public:
   /**
    * @brief Constructs a MemoryMap object. Throws on failure.
    */
-  explicit MemoryMap(std::string_view filepath, Mode mode = Mode::ReadOnly,
+  explicit MemoryMap(const std::filesystem::path &filepath, Mode mode = Mode::ReadOnly,
                      Flags flags = Flags::None) {
-    handle_ = xmap_open_ext(filepath.data(), static_cast<xmap_mode_t>(mode),
+    handle_ = xmap_open_ext(filepath.string().c_str(), static_cast<xmap_mode_t>(mode),
                             static_cast<xmap_flags_t>(flags));
     if (handle_ == nullptr) {
-      throw std::runtime_error(
-          "Failed to map file to memory. Check path, permissions or HugePage OS availability : " +
-          std::string(filepath));
+      throw std::runtime_error(std::string("Failed to map file: ") + xmap_last_error());
     }
   }
 
@@ -74,11 +83,18 @@ public:
    * @brief Returns a typed std::span representing the memory.
    * @param T Type to cast the memory to (defaults to std::byte).
    */
-  template <typename T = std::byte> std::span<T> data() const {
+  template <typename T = std::byte> std::span<T> data() {
     if (!handle_) {
       return {};
     }
     return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
+  }
+
+  template <typename T = std::byte> std::span<const T> data() const {
+    if (!handle_)
+      return {};
+    return std::span<const T>(static_cast<const T *>(xmap_data(handle_)),
+                              xmap_size(handle_) / sizeof(T));
   }
 
   size_t size() const noexcept {
@@ -110,8 +126,11 @@ public:
   /**
    * @brief Creates or connects to a name shared memory segment.
    */
-  SharedMemory(std::string_view name, size_t size, Mode mode = Mode::ReadWrite) : name_(name) {
-    handle_ = xmap_open_shared(name_.c_str(), size, static_cast<xmap_mode_t>(mode));
+  SharedMemory(std::string_view name, size_t size, Mode mode = Mode::ReadWrite,
+               IpcFlags flags = IpcFlags::CreateIfMissing)
+      : name_(name) {
+    handle_ = xmap_open_shared(name_.c_str(), size, static_cast<xmap_mode_t>(mode),
+                               static_cast<xmap_ipc_flags_t>(flags));
     if (handle_ == nullptr) {
       throw new std::runtime_error("Failed to create/open shared memory: " + name_);
     }

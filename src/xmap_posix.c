@@ -1,14 +1,18 @@
 #if defined(__unix__) || defined(__APPLE__) || defined(__linux__)
 
 #include "xmap/xmap.h"
+
+#include <errno.h>
 #include <fcntl.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #ifndef MAP_HUGETLB
-#define MAP_HUGETLB 0x40000;
+#define MAP_HUGETLB 0x40000
 #endif
 
 struct xmap_t {
@@ -16,6 +20,20 @@ struct xmap_t {
   size_t size;
   int fd;
 };
+
+#if defined(_MSC_VER)
+__declspec(thread) static char tls_error_buf[256] = "No error";
+#else
+static __thread char tls_error_buf[256] = "No error";
+#endif
+
+XMAP_API const char *xmap_last_error(void) {
+  return tls_error_buf;
+}
+
+static void set_last_error(const char *msg) {
+  snprintf(tls_error_buf, sizeof(tls_error_buf), "%s", msg);
+}
 
 xmap_t *xmap_open(const char *filepath, xmap_mode_t mode) {
   return xmap_open_ext(filepath, mode, XMAP_FLAG_NONE);
@@ -45,36 +63,42 @@ bool xmap_flush(xmap_t *map, bool async) {
   if (!map || !map->data) {
     return false;
   }
-  int flags = async ? MS_ASYNC : MS_ASYNC;
+  int flags = async ? MS_ASYNC : MS_SYNC;
   return msync(map->data, map->size, flags) == 0;
 }
 
-xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode) {
+xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode, xmap_ipc_flags_t flags) {
   if (!name || size == 0) {
     return NULL;
   }
 
   int oflags = (mode == XMAP_READ_WRITE) ? O_RDWR : O_RDONLY;
+  bool needs_truncate = false;
+
+  if (flags & XMAP_IPC_CREATE_IF_MISSING) {
+    oflags |= (O_CREAT | O_EXCL);
+    needs_truncate = true;
+  }
 
   int fd = shm_open(name, oflags, 0666);
 
-  bool created = false;
-
-  if (fd == -1 && mode == XMAP_READ_WRITE) {
-    fd = shm_open(name, oflags | O_CREAT, 0666);
-    if (fd == -1) {
+  if (fd == -1) {
+    if (errno == EEXIST && (flags & XMAP_IPC_CREATE_IF_MISSING)) {
+      fd = shm_open(name, (mode == XMAP_READ_WRITE) ? O_RDWR : O_RDONLY, 0666);
+      needs_truncate = false;
+    } else {
+      set_last_error("shm_open failed due to POSIX permissions existence mismatch");
       return NULL;
     }
-
-    created = true;
   }
 
   if (fd == -1) {
     return NULL;
   }
 
-  if (created) {
+  if (needs_truncate && mode == XMAP_READ_WRITE) {
     if (ftruncate(fd, size) == -1) {
+      set_last_error("ftruncate failed on shared memory segment.");
       close(fd);
       return NULL;
     }
@@ -87,6 +111,7 @@ xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode) {
 
   void *data = mmap(NULL, size, prot_flags, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
+    set_last_error("mmap failed for shared memory.");
     close(fd);
     return NULL;
   }
