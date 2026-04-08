@@ -94,7 +94,7 @@ target_link_libraries(my_app PRIVATE xmap::xmap)
 
 * [x] POSIX/Windows core implementation.
 * [x] C++20 RAII Wrapper.
-* [ ] Add support for HugePages (Linux) / Large Pages (Windows).
+* [X] Add support for HugePages (Linux) / Large Pages (Windows).
 * [X] Add IPC Primitives (Named Shared Memory).
 
 ## License
