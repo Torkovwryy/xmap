@@ -90,6 +90,24 @@ XMAP_API xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mod
  * @return true on success, false on failure.
  */
 XMAP_API bool xmap_unlink_shared(const char *name);
+
+/**
+ * @brief Advanced mapping flags.
+ */
+typedef enum {
+  XMAP_FLAG_NONE = 0,
+  XMAP_FLAG_HUGE_PAGES = 1 << 0 /**< Request huge pages (2MB/1GB) for extreme TLB performance. */
+} xmap_flags_t;
+
+/**
+ * @brief Opens and maps a file into memory with advanced flags.
+ * @param filepath The path to the file.
+ * @param mode Access mode (XMAP_READ_ONLY or XMAP_READ_WRITE).
+ * @param flags Advanced flags (e.g., XMAP_FLAGS_HUGE_PAGES).
+ * @return xmap_t* A valid handle on success, NULL on failure.
+ */
+XMAP_API xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags);
+
 #ifdef __cplusplus
 }
 #endif

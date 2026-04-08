@@ -15,6 +15,11 @@
 namespace xmap {
 
 enum class Mode { ReadOnly = XMAP_READ_ONLY, ReadWrite = XMAP_READ_WRITE };
+enum class Flags : uint32_t { None = XMAP_FLAG_NONE, HugePages = XMAP_FLAG_HUGE_PAGES };
+
+inline Flags operator|(Flags a, Flags b) {
+  return static_cast<Flags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
 
 class MemoryMap {
 private:
@@ -39,10 +44,14 @@ public:
   /**
    * @brief Constructs a MemoryMap object. Throws on failure.
    */
-  explicit MemoryMap(std::string_view filepath, Mode mode = Mode::ReadOnly) {
-    handle_ = xmap_open(filepath.data(), static_cast<xmap_mode_t>(mode));
+  explicit MemoryMap(std::string_view filepath, Mode mode = Mode::ReadOnly,
+                     Flags flags = Flags::None) {
+    handle_ = xmap_open_ext(filepath.data(), static_cast<xmap_mode_t>(mode),
+                            static_cast<xmap_flags_t>(flags));
     if (handle_ == nullptr) {
-      throw std::runtime_error("Failed to map file to memory: " + std::string(filepath));
+      throw std::runtime_error(
+          "Failed to map file to memory. Check path, permissions or HugePage OS availability : " +
+          std::string(filepath));
     }
   }
 
@@ -59,7 +68,7 @@ public:
 
   /**
    * @brief Returns a typed std::span representing the memory.
-   * @tparam T Type to cast the memory to (defaults to std::byte).
+   * @param T Type to cast the memory to (defaults to std::byte).
    */
   template <typename T = std::byte> std::span<T> data() const {
     if (!handle_) {
@@ -116,7 +125,7 @@ public:
     }
     return std::span<T>(static_cast<T *>(xmap_data(handle_)), xmap_size(handle_) / sizeof(T));
   }
- [[nodiscard]] size_t size() const noexcept {
+  [[nodiscard]] size_t size() const noexcept {
     return (handle_ != nullptr) ? xmap_size(handle_) : 0;
   }
 

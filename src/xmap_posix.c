@@ -7,6 +7,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifndef MAP_HUGETLB
+#define MAP_HUGETLB 0x40000;
+#endif
+
 struct xmap_t {
   void *data;
   size_t size;
@@ -14,50 +18,7 @@ struct xmap_t {
 };
 
 xmap_t *xmap_open(const char *filepath, xmap_mode_t mode) {
-  if (!filepath) {
-    return NULL;
-  }
-
-  int open_flags = (mode == XMAP_READ_WRITE) ? O_RDWR : O_RDONLY;
-  int fd = open(filepath, open_flags);
-  if (fd == -1) {
-    return NULL;
-  }
-
-  struct stat sb;
-  if (fstat(fd, &sb) == -1) {
-    close(fd);
-    return NULL;
-  }
-
-  size_t size = sb.st_size;
-  if (size == 0) {
-    close(fd);
-    return NULL; // Can't map empty file securely across all OS
-  }
-
-  int prot_flags = PROT_READ;
-  if (mode == XMAP_READ_WRITE) {
-    prot_flags |= PROT_WRITE;
-  }
-
-  void *data = mmap(NULL, size, prot_flags, MAP_SHARED, fd, 0);
-  if (data == MAP_FAILED) {
-    close(fd);
-    return NULL;
-  }
-
-  xmap_t *map = (xmap_t *)malloc(sizeof(xmap_t));
-  if (!map) {
-    munmap(data, size);
-    close(fd);
-    return NULL;
-  }
-
-  map->data = data;
-  map->size = size;
-  map->fd = fd;
-  return map;
+  return xmap_open_ext(filepath, mode, XMAP_FLAG_NONE);
 }
 
 void xmap_close(xmap_t *map) {
@@ -145,6 +106,62 @@ xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode) {
 
 bool xmap_unlink_shared(const char *name) {
   return (name ? (shm_unlink(name) == 0) : false) != 0;
+}
+
+xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags) {
+  if (!filepath)
+    return NULL;
+
+  int open_flags = (mode == XMAP_READ_WRITE) ? O_RDWR : O_RDONLY;
+  int fd = open(filepath, open_flags);
+  if (fd == -1)
+    return NULL;
+
+  struct stat sb;
+  ;
+  if (fstat(fd, &sb) == -1) {
+    close(fd);
+    return NULL;
+  }
+
+  size_t size = sb.st_size;
+  if (size == 0) {
+    close(fd);
+    return NULL;
+  }
+
+  int prot_flags = PROT_READ;
+  if (mode == XMAP_READ_WRITE)
+    prot_flags |= PROT_WRITE;
+
+  int mmap_flags = MAP_SHARED;
+
+  if (flags & XMAP_FLAG_HUGE_PAGES) {
+#ifdef __linux__
+    mmap_flags |= MAP_HUGETLB;
+#else
+    close(fd);
+    return NULL;
+#endif
+  }
+
+  void *data = mmap(NULL, size, prot_flags, mmap_flags, fd, 0);
+  if (data == MAP_FAILED) {
+    close(fd);
+    return NULL;
+  }
+
+  xmap_t *map = (xmap_t *)malloc(sizeof(xmap_t));
+  if (!map) {
+    munmap(data, size);
+    close(fd);
+    return NULL;
+  }
+
+  map->data = data;
+  map->size = size;
+  map->fd = fd;
+  return map;
 }
 
 #endif

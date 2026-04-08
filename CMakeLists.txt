@@ -44,8 +44,10 @@ option(XMAP_ENABLE_SANITIZERS "Enable ASan and UBSan" OFF)
 
 if (XMAP_ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "libxmap: Enabling Address and Undefined Behavior Sanitizers")
+
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        add_compile_options(-fsanitize=address -fsanitize=undefined)
+        add_compile_options(-fsanitize=address,undefined)
+        add_link_options(-fsanitize=address,undefined)
     elseif (MSVC)
         add_compile_options(/fsanitize=address)
     endif ()
