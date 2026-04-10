@@ -11,4 +11,9 @@ PYBIND11_MODULE(xmap_ext, m) {
       .value("ReadOnly", xmap::Mode::ReadOnly)
       .value("ReadWrite", xmap::Mode::ReadWrite)
       .export_values();
+
+  py::enum_<xmap::IpcFlags>(m, "IpcFlags", py::arithmetic())
+      .value("CreateIfMissing", xmap::IpcFlags::CreateIfMissing)
+      .value("OpenExisting", xmap::IpcFlags::OpenExisting)
+      .export_values();
 }
