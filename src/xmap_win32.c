@@ -5,13 +5,19 @@
 #include <windows.h>
 
 #if defined(_MSC_VER)
-__declspec(thread) static char tls_error_buf[256] = "No error";
+__declspec(thread) static int tls_sys_error = 0;
+__declspec(thread) static char tls_error_buf[512];
 #else
-static __thread char tls_error_buf[256] = "No error";
-#endif
+static __thread int tls_sys_error = 0;
+static __thread char tls_error_buf[512];
 
 static void set_last_error(const char *msg) {
-  snprintf(tls_error_buf, sizeof(tls_error_buf), "%s", msg);
+  tls_sys_error = GetLastError();
+  snprintf(tls_error_buf, sizeof(tls_error_buf), "%s (System Code: %d)", msg, tls_sys_error);
+}
+
+XMAP_API int xmap_last_system_error(void) {
+  return tls_sys_error;
 }
 
 XMAP_API bool xmap_init_large_page_privileges(void) {

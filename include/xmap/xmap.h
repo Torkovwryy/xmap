@@ -127,6 +127,11 @@ XMAP_API xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flag
  */
 XMAP_API const char *xmap_last_error(void);
 
+/**
+ * @brief Returns the raw OS-specific error code (errno on POSIX, GetLastError() on Windows).
+ */
+XMAP_API int xmap_last_system_error(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -31,8 +31,15 @@ XMAP_API const char *xmap_last_error(void) {
   return tls_error_buf;
 }
 
+static __thread int tls_sys_error = 0;
+
 static void set_last_error(const char *msg) {
-  snprintf(tls_error_buf, sizeof(tls_error_buf), "%s", msg);
+  tls_sys_error = errno;
+  snprintf(tls_error_buf, sizeof(tls_error_buf), "%s (System Code: %d)", msg, tls_sys_error);
+}
+
+XMAP_API int xmap_last_system_error(void) {
+  return tls_sys_error;
 }
 
 xmap_t *xmap_open(const char *filepath, xmap_mode_t mode) {
@@ -96,6 +103,18 @@ xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode, xmap_i
     return NULL;
   }
 
+  if (flags & XMAP_IPC_OPEN_EXISTING) {
+    struct stat sb;
+    if (fstat(fd, &sb) == 0) {
+      if ((size_t)sb.st_size < size) {
+        set_last_error("Requested IPC segment size is larger than the existing segment.");
+        close(fd);
+        return NULL;
+      }
+      size = sb.st_size;
+    }
+  }
+
   if (needs_truncate && mode == XMAP_READ_WRITE) {
     if (ftruncate(fd, size) == -1) {
       set_last_error("ftruncate failed on shared memory segment.");
@@ -129,10 +148,6 @@ xmap_t *xmap_open_shared(const char *name, size_t size, xmap_mode_t mode, xmap_i
   return map;
 }
 
-bool xmap_unlink_shared(const char *name) {
-  return (name ? (shm_unlink(name) == 0) : false) != 0;
-}
-
 xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags) {
   if (!filepath)
     return NULL;
@@ -143,7 +158,6 @@ xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags
     return NULL;
 
   struct stat sb;
-  ;
   if (fstat(fd, &sb) == -1) {
     close(fd);
     return NULL;
@@ -162,11 +176,11 @@ xmap_t *xmap_open_ext(const char *filepath, xmap_mode_t mode, xmap_flags_t flags
   int mmap_flags = MAP_SHARED;
 
   if (flags & XMAP_FLAG_HUGE_PAGES) {
-#ifdef __linux__
+#ifdef MAP_HUGETLB
     mmap_flags |= MAP_HUGETLB;
 #else
-    close(fd);
-    return NULL;
+    set_last_error(
+        "Warning: HugePages requested but not supported by OS. Falling back to standard pages.");
 #endif
   }
 

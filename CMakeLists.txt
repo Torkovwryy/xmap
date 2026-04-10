@@ -7,9 +7,7 @@ option(XMAP_BUILD_TESTS "Build xmap test suite" ON)
 option(XMAP_BUILD_BENCHMARKS "Build xmap benchmark suite" OFF)
 
 # --- Compiler Standards ---
-set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- RPATH configuration ---
@@ -20,9 +18,11 @@ endif ()
 # --- Target definition ---
 if (XMAP_BUILD_SHARED_LIBS)
     add_library(xmap SHARED)
+    target_compile_features(xmap PUBLIC c_std_11)
     target_compile_definitions(xmap PRIVATE XMAP_BUILD_SHARED)
 else ()
     add_library(xmap STATIC)
+    target_compile_features(xmap PUBLIC c_std_11)
 endif ()
 
 add_library(xmap::xmap ALIAS xmap)
@@ -75,6 +75,17 @@ endif ()
 # --- Benchmarks ---
 if (XMAP_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
+endif ()
+
+# --- Doxygen Custom Target ---
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    add_custom_target(docs
+            COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM
+    )
 endif ()
 
 # --- Installation Rules ---
