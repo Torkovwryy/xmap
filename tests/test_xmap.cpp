@@ -24,7 +24,7 @@ protected:
 };
 
 TEST_F(XMapTest, MapAndReadSuccess) {
-  xmap::MemoryMap map(test_file, xmap::Mode::ReadOnly);
+  xmap::MemoryMap<xmap::Mode::ReadOnly> map(test_file);
 
   ASSERT_TRUE(map.is_valid());
   EXPECT_EQ(map.size(), 10);
@@ -37,7 +37,7 @@ TEST_F(XMapTest, MapAndReadSuccess) {
 
 TEST_F(XMapTest, MapAndWriteSuccess) {
   {
-    xmap::MemoryMap map(test_file, xmap::Mode::ReadWrite);
+    xmap::MemoryMap<xmap::Mode::ReadWrite> map(test_file);
     ASSERT_TRUE(map.is_valid());
 
     auto data = map.data<char>();
@@ -54,13 +54,13 @@ TEST_F(XMapTest, MapAndWriteSuccess) {
 
 TEST_F(XMapTest, MapInvalidFileFails) {
   EXPECT_THROW(
-      { xmap::MemoryMap map("arquivo_inexistente_123.bin", xmap::Mode::ReadOnly); },
+      { xmap::MemoryMap<xmap::Mode::ReadOnly> map("arquivo_inexistente_123.bin"); },
       std::runtime_error);
 }
 
 TEST_F(XMapTest, HugePagesFallbackTest) {
   try {
-    xmap::MemoryMap map(test_file, xmap::Mode::ReadOnly, xmap::Flags::HugePages);
+    xmap::MemoryMap<xmap::Mode::ReadOnly> map(test_file, xmap::Flags::HugePages);
     ASSERT_TRUE(map.is_valid());
     std::cout << "[  INFO  ] HugePages are natively supported and active on this system!\n";
   } catch (const std::runtime_error &) {
