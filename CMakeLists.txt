@@ -5,6 +5,7 @@ project(xmap VERSION 1.0.0 LANGUAGES C CXX)
 option(XMAP_BUILD_SHARED_LIBS "Build xmap as a shared library" OFF)
 option(XMAP_BUILD_TESTS "Build xmap test suite" ON)
 option(XMAP_BUILD_BENCHMARKS "Build xmap benchmark suite" OFF)
+option(XMAP_BUILD_PYTHON "Build Python bindings via pybind11" OFF)
 
 # --- Compiler Standards ---
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -116,3 +117,8 @@ write_basic_package_version_file(
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xmapConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xmap
 )
+
+# --- Python Bindings ---
+if (XMAP_BUILD_PYTHON)
+    add_subdirectory(python)
+endif ()
