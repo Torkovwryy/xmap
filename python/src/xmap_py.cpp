@@ -21,7 +21,7 @@ public:
   ~PyMemoryMap() {
     close();
   }
- void close() {
+  void close() {
     if (handle_ != nullptr) {
       xmap_close(handle_);
       handle_ = nullptr;
@@ -58,4 +58,17 @@ PYBIND11_MODULE(xmap_ext, m) {
       .value("CreateIfMissing", xmap::IpcFlags::CreateIfMissing)
       .value("OpenExisting", xmap::IpcFlags::OpenExisting)
       .export_values();
+
+  py::class_<PyMemoryMap>(m, "MemoryMap", py::buffer_protocol())
+      .def(py::init<const std::string &, xmap::Mode, xmap::Flags>(), py::arg("filepath"),
+           py::arg("mode") = xmap::Mode::ReadOnly, py::arg("flags") = xmap::Flags::None)
+      .def_buffer([](PyMemoryMap &m) -> py::buffer_info {
+        if (!m.is_valid()) {
+          throw std::runtime_error("Cannot access data: Memory map is closed or invalid.");
+        }
+
+        return py::buffer_info(m.raw_data(), sizeof(uint8_t),
+                               py::format_descriptor<uint8_t>::format(), 1, {m.size()},
+                               {sizeof(uint8_t)}, m.mode() == xmap::Mode::ReadOnly);
+      });
 }
