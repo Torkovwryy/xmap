@@ -22,11 +22,16 @@ a zero-cost, type-safe C++20 interface using `std::span`.
 
 ## Performance
 
-`libxmap` is rigorously benchmarked against the standard C++ library (`std::fstream`) using [Google Benchmark](https://gihub/com/google/benchmark). By utilizing OS-level page cache and zero-copy reads, it achieves orders of magnitude faster access times.
+`libxmap` is rigorously benchmarked against the standard C++ library (`std::fstream`)
+using [Google Benchmark](https://gihub/com/google/benchmark). By utilizing OS-level page cache and zero-copy reads, it
+achieves orders of magnitude faster access times.
 
 *Metrics for 100MB payload (Linux, btrfs):*
-* **Sequential Write:** `libxmap` is ~3% faster by avoiding user-space buffer copies (leveraging `MAP_POPULATE` pre-faulting).
-* **Sequential Read:** `libxmap` is **~2600x faster** (5.88 TiB/s vs 2.26 GiB/s) because it returns a direct kernel pointer (Zero-Copy) rather than copying data into a user-space buffer.
+
+* **Sequential Write:** `libxmap` is ~3% faster by avoiding user-space buffer copies (leveraging `MAP_POPULATE`
+  pre-faulting).
+* **Sequential Read:** `libxmap` is **~2600x faster** (5.88 TiB/s vs 2.26 GiB/s) because it returns a direct kernel
+  pointer (Zero-Copy) rather than copying data into a user-space buffer.
 
 ## Quick Start
 
@@ -81,6 +86,35 @@ int main() {
     
     return 0;
 }
+```
+
+### Using the Python API (Data Science & AI)
+
+`libxmap` provides high-performance, zero-copy Python bindings via `pybind11`, fully integrated with the Python Buffer
+Protocol and `NumPy`.
+
+#### Installation
+
+```bash
+pip install .
+```
+
+## NumPy Zero-Copy Example
+
+```python
+import numpy as np
+from xmap import MemoryMap, SharedMemory, Mode, Flags
+
+# Map a 100GB dataset file into RAM (Zero-Copy)
+with MemoryMap("massive_dataset.bin", Mode.ReadWrite, Flags.Populate) as mmap:
+    # Instantly wrap the memory in a NumPy array without copying a single byte
+    arr = mmap.as_array(dtype=np.float32)
+
+    # Mutate the array directly in RAM/Disk
+    arr[0] = 3.14159
+
+    # Flush changes to physical storage
+    mmap.flush()
 ```
 
 ## Integration (CMake)
