@@ -1,0 +1,31 @@
+[build-system]
+requires = ["scikit-build-core>=0.5.0", "pybind11>=2.11.1"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "libxmap"
+version = "2.1.0"
+description = "Zero-dependency, ABI-stable, cross-platform memory-mapped I/O and IPC."
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    { name = "Principal Architect", email = "architect@xmap.dev" }
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Hardware :: Memory",
+]
+dependencies = [
+    "numpy>=1.20.0"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0.0"]
+
+[tool.scikit-build]
+cmake.args = ["-DXMAP_BUILD_PYTHON=ON", "-DXMAP_BUILD_TESTS=OFF", "-DXMAP_BUILD_BENCHMARKS=OFF"]
+wheel.packages = ["python/xmap.py", "python/xmap_ext.pyi"]
