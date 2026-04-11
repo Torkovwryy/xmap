@@ -135,7 +135,8 @@ PYBIND11_MODULE(xmap_ext, m) {
       });
 
   py::class_<PySharedMemory>(m, "SharedMemory", py::buffer_protocol())
-      .def(py::init<const std::string &, size_t, xmap::Mode, xmap::IpcFlags>(), py::arg("name"),           py::arg("size"),py::arg("mode") = xmap::Mode::ReadWrite,
+      .def(py::init<const std::string &, size_t, xmap::Mode, xmap::IpcFlags>(), py::arg("name"),
+           py::arg("size"), py::arg("mode") = xmap::Mode::ReadWrite,
            py::arg("flags") = xmap::IpcFlags::CreateIfMissing)
 
       .def_buffer([](PySharedMemory &m) -> py::buffer_info {
@@ -147,5 +148,18 @@ PYBIND11_MODULE(xmap_ext, m) {
       })
       .def("close", &PySharedMemory::close)
       .def_property_readonly("size", &PySharedMemory::size)
-      .def_property_readonly("is_valid", &PySharedMemory::is_valid);
+      .def_property_readonly("is_valid", &PySharedMemory::is_valid)
+      .def("__enter__", [](PySharedMemory &self) -> PySharedMemory & { return self; })
+      .def("__exit__",
+           [](PySharedMemory &self, py::object, py::object, py::object) {
+             self.close();
+             return false;
+           })
+      .def_static(
+          "unlink", [](const std::string &name) { return xmap::SharedMemory::unlink(name); },
+          py::arg("name"), "Removes the shared memory segment from the OS.")
+      .def("__repr__", [](const PySharedMemory &m) {
+        return "<xmap.SharedMemory valid=" + std::string(m.is_valid() ? "True" : "False") +
+               " size=" + std::to_string(m.size()) + " bytes>";
+      });
 }
