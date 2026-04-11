@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from python.xmap import SharedMemory, Mode, IpcFlags
+from xmap import SharedMemory, Mode, IpcFlagsgs
 
 
 @pytest.fixture

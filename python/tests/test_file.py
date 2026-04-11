@@ -3,7 +3,7 @@ import os
 import pytest
 from pathlib import Path
 
-from python.xmap import MemoryMap, Mode, Flags
+from xmap import MemoryMap, Mode, Flags
 
 
 @pytest.fixture
