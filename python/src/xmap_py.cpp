@@ -13,7 +13,7 @@ public:
   PyMemoryMap(const std::string &filepath, xmap::Mode mode, xmap::Flags flags) : mode_(mode) {
     handle_ = xmap_open_ext(filepath.c_str(), static_cast<xmap_mode_t>(mode),
                             static_cast<xmap_flags_t>(flags));
-    if (handle_) {
+    if (handle_ == nullptr) {
       throw std::runtime_error(std::string("Failed to map file: ") + xmap_last_error());
     }
   }
@@ -103,6 +103,12 @@ PYBIND11_MODULE(xmap_ext, m) {
   py::enum_<xmap::Mode>(m, "Mode")
       .value("ReadOnly", xmap::Mode::ReadOnly)
       .value("ReadWrite", xmap::Mode::ReadWrite)
+      .export_values();
+
+  py::enum_<xmap::Flags>(m, "Flags", py::arithmetic())
+      .value("None_", xmap::Flags::None)
+      .value("HugePages", xmap::Flags::HugePages)
+      .value("Populate", xmap::Flags::Populate)
       .export_values();
 
   py::enum_<xmap::IpcFlags>(m, "IpcFlags", py::arithmetic())
