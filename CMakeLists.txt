@@ -26,6 +26,8 @@ else ()
     target_compile_features(xmap PUBLIC c_std_11)
 endif ()
 
+set_target_properties(xmap PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 add_library(xmap::xmap ALIAS xmap)
 
 # --- Platform specific sources ---
