@@ -88,5 +88,9 @@ PYBIND11_MODULE(xmap_ext, m) {
            [](PyMemoryMap &self, py::object exc_type, py::object exc_value, py::object traceback) {
              self.close();
              return false;
-           });
+           })
+      .def("__repr__", [](const PyMemoryMap &m) {
+        return "<xmap.MemoryMap valid=" + std::string(m.is_valid() ? "True" : "False") +
+               " size=" + std::to_string(m.size()) + " bytes";
+      });
 }
