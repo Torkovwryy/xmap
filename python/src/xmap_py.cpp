@@ -70,5 +70,12 @@ PYBIND11_MODULE(xmap_ext, m) {
         return py::buffer_info(m.raw_data(), sizeof(uint8_t),
                                py::format_descriptor<uint8_t>::format(), 1, {m.size()},
                                {sizeof(uint8_t)}, m.mode() == xmap::Mode::ReadOnly);
-      });
+      })
+      .def("close", &PyMemoryMap::close, "Unmaps the memory and releases OS resources.")
+      .def("flush", &PyMemoryMap::flush, py::arg("async_flush") = false,
+           "Flushes memory changes to the physical disk")
+      .def_property_readonly("size", &PyMemoryMap::size,
+                             "Gets the total size of the mapping in bytes.")
+      .def_property_readonly("is_valid", &PyMemoryMap::is_valid,
+                             "Checks if the mapping is active.");
 }
