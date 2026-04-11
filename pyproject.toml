@@ -28,4 +28,3 @@ test = ["pytest>=7.0.0"]
 
 [tool.scikit-build]
 cmake.args = ["-DXMAP_BUILD_PYTHON=ON", "-DXMAP_BUILD_TESTS=OFF", "-DXMAP_BUILD_BENCHMARKS=OFF"]
-wheel.packages = ["python/xmap.py", "python/xmap_ext.pyi"]

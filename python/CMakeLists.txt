@@ -14,3 +14,7 @@ set_target_properties(xmap_ext PROPERTIES OUTPUT_NAME "xmap_ext")
 target_link_libraries(xmap_ext PRIVATE xmap::xmap)
 
 target_compile_features(xmap_ext PRIVATE cxx_std_20)
+
+install(TARGETS xmap_ext DESTINATION .)
+
+install(FILES xmap.py xmap_ext.pyi DESTINATION .)
