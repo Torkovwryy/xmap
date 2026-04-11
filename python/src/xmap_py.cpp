@@ -46,6 +46,46 @@ public:
   }
 };
 
+class PySharedMemory {
+private:
+  xmap_t *handle_ = nullptr;
+  xmap::Mode mode_;
+
+public:
+  PySharedMemory(const std::string &name, size_t size, xmap::Mode mode, xmap::IpcFlags flags)
+      : mode_(mode) {
+    handle_ = xmap_open_shared(name.c_str(), size, static_cast<xmap_mode_t>(mode),
+                               static_cast<xmap_ipc_flags_t>(flags));
+    if (!handle_) {
+      throw std::runtime_error(std::string("Failed to open shared memory: ") + xmap_last_error());
+    }
+  }
+
+  ~PySharedMemory() {
+    close();
+  }
+
+  void close() {
+    if (handle_) {
+      xmap_close(handle_);
+      handle_ = nullptr;
+    }
+  }
+
+  size_t size() const {
+    return handle_ ? xmap_size(handle_) : 0;
+  }
+  bool is_valid() const {
+    return handle_ != nullptr;
+  }
+  void *raw_data() const {
+    return handle_ ? xmap_data(handle_) : nullptr;
+  }
+  xmap::Mode mode() const {
+    return mode_;
+  }
+};
+
 PYBIND11_MODULE(xmap_ext, m) {
   m.doc() = "Zero-dependency, ABI-stable, cross-platform memory-mapped I/O.";
 
