@@ -87,6 +87,17 @@ public:
 };
 
 PYBIND11_MODULE(xmap_ext, m) {
+  static py::exception<std::runtime_error> xmap_error(m, "XMapError");
+
+  py::register_exception_translator([](std::exception_ptr p) {
+    try {
+      if (p)
+        std::rethrow_exception(p);
+    } catch (const std::runtime_error &e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
+    }
+  });
+
   m.doc() = "Zero-dependency, ABI-stable, cross-platform memory-mapped I/O.";
 
   py::enum_<xmap::Mode>(m, "Mode")
