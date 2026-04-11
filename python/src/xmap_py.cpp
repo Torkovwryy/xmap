@@ -76,6 +76,17 @@ PYBIND11_MODULE(xmap_ext, m) {
            "Flushes memory changes to the physical disk")
       .def_property_readonly("size", &PyMemoryMap::size,
                              "Gets the total size of the mapping in bytes.")
-      .def_property_readonly("is_valid", &PyMemoryMap::is_valid,
-                             "Checks if the mapping is active.");
+      .def_property_readonly("is_valid", &PyMemoryMap::is_valid, "Checks if the mapping is active.")
+      .def("__enter__",
+           [](PyMemoryMap &self) -> PyMemoryMap & {
+             if (!self.is_valid()) {
+               throw std::runtime_error("MemoryMap is invalid.");
+             }
+             return self;
+           })
+      .def("__exit__",
+           [](PyMemoryMap &self, py::object exc_type, py::object exc_value, py::object traceback) {
+             self.close();
+             return false;
+           });
 }
