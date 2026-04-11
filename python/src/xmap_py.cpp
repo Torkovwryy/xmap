@@ -112,7 +112,7 @@ PYBIND11_MODULE(xmap_ext, m) {
 
   py::class_<PyMemoryMap>(m, "MemoryMap", py::buffer_protocol())
       .def(py::init<const std::string &, xmap::Mode, xmap::Flags>(), py::arg("filepath"),
-           py::arg("mode") = xmap::Mode::ReadOnly, py::arg("flags") = xmap::Flags::None)
+           py::arg("mode") = xmap::Mode::ReadOnly, py::arg("flags"))
       .def_buffer([](PyMemoryMap &m) -> py::buffer_info {
         if (!m.is_valid()) {
           throw std::runtime_error("Cannot access data: Memory map is closed or invalid.");
@@ -147,8 +147,7 @@ PYBIND11_MODULE(xmap_ext, m) {
 
   py::class_<PySharedMemory>(m, "SharedMemory", py::buffer_protocol())
       .def(py::init<const std::string &, size_t, xmap::Mode, xmap::IpcFlags>(), py::arg("name"),
-           py::arg("size"), py::arg("mode") = xmap::Mode::ReadWrite,
-           py::arg("flags") = xmap::IpcFlags::CreateIfMissing)
+           py::arg("size"), py::arg("mode") = xmap::Mode::ReadWrite, py::arg("flags"))
 
       .def_buffer([](PySharedMemory &m) -> py::buffer_info {
         if (!m.is_valid())

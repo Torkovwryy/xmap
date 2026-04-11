@@ -23,6 +23,9 @@ class MemoryMap(xmap_ext.MemoryMap):
 class SharedMemory(xmap_ext.SharedMemory):
     """High-level wrapper for Inter-Process Communication (IPC) memory segments."""
 
+    def __init__(self, name, size, mode=Mode.ReadWrite, flags=IpcFlags.CreateIfMissing):
+        super().__init__(name, size, mode, flags)
+
     def as_array(self, dtype=np.uint8):
         """Returns a Zero-Copy NumPy array backed by the shared memory segment."""
         return np.frombuffer(self, dtype=dtype)
