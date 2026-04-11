@@ -133,4 +133,19 @@ PYBIND11_MODULE(xmap_ext, m) {
         return "<xmap.MemoryMap valid=" + std::string(m.is_valid() ? "True" : "False") +
                " size=" + std::to_string(m.size()) + " bytes";
       });
+
+  py::class_<PySharedMemory>(m, "SharedMemory", py::buffer_protocol())
+      .def(py::init<const std::string &, size_t, xmap::Mode, xmap::IpcFlags>(), py::arg("name"),           py::arg("size"),py::arg("mode") = xmap::Mode::ReadWrite,
+           py::arg("flags") = xmap::IpcFlags::CreateIfMissing)
+
+      .def_buffer([](PySharedMemory &m) -> py::buffer_info {
+        if (!m.is_valid())
+          throw std::runtime_error("SharedMemory is invalid.");
+        return py::buffer_info(m.raw_data(), sizeof(uint8_t),
+                               py::format_descriptor<uint8_t>::format(), 1, {m.size()},
+                               {sizeof(uint8_t)}, m.mode() == xmap::Mode::ReadOnly);
+      })
+      .def("close", &PySharedMemory::close)
+      .def_property_readonly("size", &PySharedMemory::size)
+      .def_property_readonly("is_valid", &PySharedMemory::is_valid);
 }
